@@ -1,0 +1,44 @@
+
+
+		
+
+\ \  
+  |
+arg
+arg|
+  arg
+arg|
+  arg  
+arg|
+\  arg\ \ 
+ |arg  |
+ \ \a\r\g\  
+ arg |
+ \  \ 'x '
+ | x |
+prefix"\"thingy\""'"suffix"'
+prefix"thingy""suffix"|
+'''\'''
+\|
+'\'
+\|
+'\\'
+\\|
+'\''\'
+\\|
+"''"
+''|
+"'\"'"
+'"'|
+'""'
+""|
+"" '' "" ''
+||||
+""'' ''""
+||
+echo She\ 'sa'"id"\ \"Meow\"
+echo|She said "Meow"|
+echo "\H\e"\ 's'\aid""""''''"\ "woof-woof
+echo|He said woof-woof|
+echo Find 'a' \w\a\y "or" ""make'' ""one''
+echo|Find|a|way|or|make|one|
