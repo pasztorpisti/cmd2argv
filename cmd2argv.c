@@ -1,17 +1,19 @@
 #include "cmd2argv.h"
 
+#define ONLY_COUNTING_BUF_LEN (!buf)
+
 C2A_RESULT
 cmd2argv(const char* cmd, char* buf, size_t* buf_len,
-		char** argv, int* argv_len, int* err_pos) {
-	int argc = 0;
+		char** argv, size_t* argv_len, size_t* err_pos) {
+	size_t argc = 0;
 	const char* p = cmd;
 	const char* last_quot_pos = NULL;
 	char* dest = buf;
-	char* dest_end = dest + *buf_len;
+	char* dest_end = ONLY_COUNTING_BUF_LEN ? NULL : (dest + *buf_len);
 	char weak_quoting = 0;
 
 	// argv has to have space at least for the terminating NULL
-	if (*argv_len < 1)
+	if (!ONLY_COUNTING_BUF_LEN && *argv_len < 1)
 		return C2A_ARGV_TOO_SMALL;
 
 	while (*p) {
@@ -20,11 +22,14 @@ cmd2argv(const char* cmd, char* buf, size_t* buf_len,
 		if (!*p)
 			break;
 
-		// It is +2 because the buffer has to be able to hold at least
-		// another argv pointer plus a closing NULL argv pointer.
-		if (*argv_len < argc + 2)
-			return C2A_ARGV_TOO_SMALL;
-		argv[argc++] = dest;
+		if (!ONLY_COUNTING_BUF_LEN) {
+			// It is +2 because the buffer has to be able to hold at least
+			// another argv pointer plus a closing NULL argv pointer.
+			if (*argv_len < argc + 2)
+				return C2A_ARGV_TOO_SMALL;
+			argv[argc] = dest;
+		}
+		argc++;
 
 		while (*p) {
 			switch (*p) {
@@ -37,68 +42,79 @@ cmd2argv(const char* cmd, char* buf, size_t* buf_len,
 			case '\\':
 				if (!p[1]) {
 					if (err_pos)
-						*err_pos = (int)(p - cmd);
+						*err_pos = (size_t)(p - cmd);
 					return C2A_LONELY_ESCAPE;
 				}
-				if (dest >= dest_end)
-					return C2A_BUF_TOO_SMALL;
-				*dest++ = p[1];
+				if (!ONLY_COUNTING_BUF_LEN) {
+					if (dest >= dest_end)
+						return C2A_BUF_TOO_SMALL;
+					*dest = p[1];
+				}
+				dest++;
 				p += 2;
 				break;
 
 			case ' ':
 			case '\t':
 			case '\n':
-				if (weak_quoting) {
-					if (dest >= dest_end)
-						return C2A_BUF_TOO_SMALL;
-					*dest++ = *p++;
-					break;
-				} else {
-					p++;
-					// double break from both the switch and the while loop
-					goto end_string;
-				}
+				if (weak_quoting)
+					goto default_handling;
+				p++;
+				// double break from both the switch and the while loop
+				goto end_arg;
 
 			case '\'':
-				if (!weak_quoting) {
-					// strong quoting
-					last_quot_pos = p;
-					p++;
-					while (*p && *p != '\'' && dest < dest_end)
-						*dest++ = *p++;
-					if (!*p) {
-						if (err_pos)
-							*err_pos = (int)(last_quot_pos - cmd);
-						return C2A_UNMATCHED_QUOT;
-					}
+				if (weak_quoting)
+					goto default_handling;
+				// strong quoting
+				last_quot_pos = p;
+				if (ONLY_COUNTING_BUF_LEN) {
+					for (p=p+1; *p && *p != '\''; dest++,p++) {}
+				} else {
+					for (p=p+1; *p && *p != '\'' && dest < dest_end; dest++,p++)
+						*dest = *p;
 					if (dest >= dest_end)
 						return C2A_BUF_TOO_SMALL;
-					p++;
-					break;
 				}
-				// no break!!! going for default handling
+				if (!*p) {
+					if (err_pos)
+						*err_pos = (size_t)(last_quot_pos - cmd);
+					return C2A_UNMATCHED_QUOT;
+				}
+				p++;
+				break;
 
+default_handling:
 			default:
-				if (dest >= dest_end)
-					return C2A_BUF_TOO_SMALL;
-				*dest++ = *p++;
+				if (!ONLY_COUNTING_BUF_LEN) {
+					if (dest >= dest_end)
+						return C2A_BUF_TOO_SMALL;
+					*dest = *p;
+				}
+				dest++;
+				p++;
 				break;
 			}
 		}
 		if (weak_quoting) {
 			if (err_pos)
-				*err_pos = (int)(last_quot_pos - cmd);
+				*err_pos = (size_t)(last_quot_pos - cmd);
 			return C2A_UNMATCHED_QUOT;
 		}
-end_string:
-		if (dest >= dest_end)
-			return C2A_BUF_TOO_SMALL;
-		*dest++ = 0;
+end_arg:
+		if (!ONLY_COUNTING_BUF_LEN) {
+			if (dest >= dest_end)
+				return C2A_BUF_TOO_SMALL;
+			*dest = 0;
+		}
+		dest++;
 	}
 
-	argv[argc] = NULL;
-	*argv_len = argc;
-	*buf_len = dest - buf;
+	if (!ONLY_COUNTING_BUF_LEN)
+		argv[argc] = NULL;
+	if (argv_len)
+		*argv_len = argc + 1;
+	if (buf_len)
+		*buf_len = dest - buf;
 	return C2A_OK;
 }
