@@ -1,4 +1,6 @@
 #include "cmd2argv.h"
+#include <stdlib.h>
+#include <assert.h>
 
 #define ONLY_COUNTING_BUF_LEN (!buf)
 
@@ -117,4 +119,35 @@ end_arg:
 	if (buf_len)
 		*buf_len = dest - buf;
 	return C2A_OK;
+}
+
+C2A_RESULT
+cmd2argv_malloc(const char* cmd, char*** argv, size_t* argv_len, size_t* err_pos) {
+	size_t buf_len, _argv_len, argv_size;
+
+	// 1st pass: querying the required buffer size
+	C2A_RESULT res = cmd2argv(cmd, NULL, &buf_len, NULL, &_argv_len, err_pos);
+	if (res != C2A_OK)
+		return res;
+
+	// allocating the buffer
+	argv_size = _argv_len * sizeof(char*);
+	char* buf = malloc(argv_size + buf_len);
+	if (!buf)
+		return C2A_MALLOC;
+
+	// 2nd pass: splitting cmd into the allocated buffer
+	res = cmd2argv(cmd, buf+argv_size, &buf_len, (char**)buf, &_argv_len, NULL);
+	// At this point cmd2argv() must succeed. A return value other
+	// than C2A_OK suggests a bug in cmd2argv().
+	assert(res == C2A_OK);
+	*argv = (char**)buf;
+	if (argv_len)
+		*argv_len = _argv_len;
+	return res;
+}
+
+void
+cmd2argv_free(char** argv) {
+	free(argv);
 }

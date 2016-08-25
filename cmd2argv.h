@@ -48,11 +48,17 @@ typedef enum {
 	C2A_ARGV_TOO_SMALL,	// *argv_len isn't large enough
 	C2A_UNMATCHED_QUOT,	// reached the end of cmd while looking for matching ' or "
 	C2A_LONELY_ESCAPE,	// cmd ends with \ but the escaped character is missing
-
+	C2A_MALLOC,			// malloc() failed. returned only by cmd2argv_malloc().
+						// cmd2argv() never returns this.
 	C2A_COUNT,			// the number of possible return values (not an actual return value)
 } C2A_RESULT;
 
-// cmd2argv splits a bash-style command into an argv array.
+// cmd2argv() splits a bash-style command into an argv array. It doesn't perform
+// any memory allocations - operates only on the buffers provided by the caller.
+// By specifying buf==NULL one can query the required buffer size to split a
+// given command into an argv array.
+//
+// PARAMETERS:
 //
 // cmd:
 //		Points to the zero terminated string that represents the command.
@@ -123,3 +129,38 @@ typedef enum {
 C2A_RESULT
 cmd2argv(const char* cmd, char* buf, size_t* buf_len,
 		char** argv, size_t* argv_len, size_t* err_pos);
+
+// cmd2argv_malloc() and cmd2argv_free() are convenience wrappers around cmd2argv().
+// cmd2argv_malloc() uses 2 passes (2 calls to cmd2argv): First it queries the
+// required buffer size to split the command, then it performs an allocation (malloc)
+// and calls cmd2argv again to split the command using the allocated buffer.
+// The returned argv has to be released with cmd2argv_free().
+//
+// EXAMPLE:
+//
+//	char** argv;
+//	if (cmd2argv_malloc("ls -l --color=auto", &argv, NULL, NULL) == C2A_OK) {
+//		// ... use argv ...
+//		cmd2argv_free(argv);
+//	}
+//
+// PARAMETERS:
+//
+// cmd:
+//		Points to the zero terminated string that represents the command.
+//
+// argv:
+//		Points to a variable of type (char**) that receives the newly allocated
+//		argv array. The value of *argv is set only if the function returns C2A_OK.
+//
+// argv_len:
+//		This can be NULL. If it is non-NULL then *argv_len receives the length
+//		of the argv array including the terminating NULL item.
+//
+// err_pos:
+//		Same as in case of the cmd2argv() function.
+C2A_RESULT
+cmd2argv_malloc(const char* cmd, char*** argv, size_t* argv_len, size_t* err_pos);
+
+void
+cmd2argv_free(char** argv);

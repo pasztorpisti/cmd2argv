@@ -229,6 +229,44 @@ int check_splitting_works(char* cmd, char* argv_str) {
 	return 0;
 }
 
+// comparing the results of cmd2argv() to that of cmd2argv_malloc()
+int check_cmd2argv_malloc(char* cmd) {
+	// cmd2argv()
+	char* argv[MAX_ARGV_LEN];
+	char buf[MAX_CMD_LEN];
+	size_t buf_len = sizeof(buf);
+	size_t argv_len = MAX_ARGV_LEN;
+
+	// cmd2argv_alloc()
+	char** argv2;
+	size_t argv_len2;
+
+	C2A_RESULT res = cmd2argv(cmd, buf, &buf_len, &argv[0], &argv_len, NULL);
+	if (res != C2A_OK) {
+		LOG_ERROR("cmd2argv() failed.");
+		return 0;
+	}
+
+	res = cmd2argv_malloc(cmd, &argv2, &argv_len2, NULL);
+	if (res != C2A_OK) {
+		LOG_ERROR("cmd2argv_malloc() failed.");
+		return 0;
+	}
+
+	if (argv_len != argv_len2) {
+		LOG_ERROR("argv_len(%d) != argv_len2(%d)", (int)argv_len, (int)argv_len2);
+		cmd2argv_free(argv2);
+		return 0;
+	}
+	if (!compare_argv(argv, argv2)) {
+		LOG_ERROR("argv mismatch");
+		cmd2argv_free(argv2);
+		return 0;
+	}
+	cmd2argv_free(argv2);
+	return 1;
+}
+
 // comparing inplace and non-inplace splitting
 int check_inplace_splitting(char* cmd) {
 	// non-inplace
@@ -314,6 +352,7 @@ int check_buf_len_calculation(char* cmd) {
 int perform_test(char* cmd, char* argv_str) {
 	return check_splitting_works(cmd, argv_str) &&
 		check_inplace_splitting(cmd) &&
+		check_cmd2argv_malloc(cmd) &&
 		check_buf_len_calculation(cmd);
 }
 
