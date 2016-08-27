@@ -124,6 +124,7 @@ end_arg:
 C2A_RESULT
 cmd2argv_malloc(const char* cmd, char*** argv, size_t* argv_len, size_t* err_pos) {
 	size_t buf_len, _argv_len, argv_size;
+	char* buf;
 
 	// 1st pass: querying the required buffer size
 	C2A_RESULT res = cmd2argv(cmd, NULL, &buf_len, NULL, &_argv_len, err_pos);
@@ -132,7 +133,7 @@ cmd2argv_malloc(const char* cmd, char*** argv, size_t* argv_len, size_t* err_pos
 
 	// allocating the buffer
 	argv_size = _argv_len * sizeof(char*);
-	char* buf = malloc(argv_size + buf_len);
+	buf = malloc(argv_size + buf_len);
 	if (!buf)
 		return C2A_MALLOC;
 
