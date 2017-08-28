@@ -9,8 +9,8 @@ are expected to be bash-style.
 Usage
 =====
 
-Add the `cmd2argv.c` and `cmd2argv.h` files to your project. There is a
-low and a high level interface available.
+Add the [`cmd2argv.c`](/cmd2argv.c) and [`cmd2argv.h`](/cmd2argv.h) files
+to your project. There is a low and a high level interface available.
 
 1. The low level interface (`cmd2argv()`) doesn't perform any allocation.
    You can use it to perform two basic operations:
@@ -40,5 +40,5 @@ void example() {
 }
 ```
 
-Read the `cmd2argv.h` file for more info about the usage and the
-bash-style escaping/quoting supported by this utility.
+Read the [`cmd2argv.h`](/cmd2argv.h) file for more info about the usage
+and the bash-style escaping/quoting supported by this utility.
